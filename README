@@ -1,0 +1,18 @@
+use terminal:
+arangosh --server.database fantasy_db
+
+create uniq index for email:
+db.user.ensureIndex({ type: "hash", fields: [ "email" ], unique: true, inBackground: true });
+
+
+use ttl index for refresh token:
+https://www.arangodb.com/arangodb-training-center/ttl-indexes/
+7*24*60*60 - 1 week
+
+db._create("refreshTokens");
+db.refreshTokens.ensureIndex({ 
+  type: "ttl", 
+  fields: ["last_modified_at"], 
+  expireAfter: 7*24*60*60 
+});
+db.refreshTokens.ensureIndex({ type: "hash", fields: [ "token" ], unique: true, inBackground: true });
