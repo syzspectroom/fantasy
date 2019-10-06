@@ -47,12 +47,10 @@ func (uh *authHandler) Login(c context.Context, lm *model.LoginInput) (*model.Lo
 	if err := validate.Struct(lm); err != nil {
 		return nil, &e.Error{Op: op, Err: err}
 	}
-	//TODO: handle user not found
 	dbUser, err := uh.userRepo.GetByEmail(c, lm.Email)
 	if err != nil {
 		return nil, &e.Error{Op: op, Err: err}
 	}
-	//TODO: handle passwords do not match
 	err = bcrypt.CompareHashAndPassword([]byte(dbUser.HashedPassword), []byte(lm.Password))
 	if err != nil {
 		return nil, &e.Error{Code: e.EINVALID, Op: op, Message: err.Error()}
@@ -96,13 +94,11 @@ func (uh *authHandler) Register(c context.Context, rm *model.Registration) error
 		return &e.Error{Op: op, Err: err}
 	}
 
-	// TODO: add custom error for uniq validation
 	userExist, err := uh.userRepo.ExistsByEmail(c, user.Email)
 	if err != nil {
 		return &e.Error{Op: op, Err: err}
-	}
-
-	if userExist {
+	} else if userExist {
+		// TODO: message format?
 		return &e.Error{Op: op, Code: e.EINVALID, Message: "Email is already taken"}
 	}
 	if err := uh.userRepo.Store(c, user); err != nil {
