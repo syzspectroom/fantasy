@@ -3,9 +3,9 @@ package repository
 import (
 	"context"
 	"fantasy/db"
+	e "fantasy/error"
 	"fantasy/model"
 	"log"
-	"strings"
 )
 
 // UserRepository repository object
@@ -20,24 +20,24 @@ func NewUserRepository(Conn *db.DbInterface) UserRepositoryInterface {
 
 // Store store user model in db
 func (ur *UserRepository) Store(ctx context.Context, u *model.User) error {
-	err := (*ur.Conn).Insert(ctx, "user", u)
+	err := (*ur.Conn).Insert(ctx, "users", u)
 	if err != nil {
-		return err
+		return &e.Error{Op: "UserRepository.Store", Err: err}
 	}
 
 	return nil
 }
 
-// GetByEmail get user struct byg1	et user struct by email \ email
+// GetByEmail get user struct by email
 func (ur *UserRepository) GetByEmail(ctx context.Context, email string) (*model.User, error) {
-	query := "FOR u IN user FILTER u.email == @email LIMIT 1 RETURN u"
+	query := "FOR u IN users FILTER u.email == @email LIMIT 1 RETURN u"
 	bindVars := map[string]interface{}{
-		"email": strings.TrimSpace(strings.ToLower(email)),
+		"email": email,
 	}
 	user := &model.User{}
 	_, err := (*ur.Conn).Query(ctx, query, bindVars, user)
 	if err != nil {
-		return nil, err
+		return nil, &e.Error{Op: "UserRepository.GetByEmail", Err: err}
 	}
 	return user, nil
 }
@@ -46,7 +46,7 @@ func (ur *UserRepository) GetByEmail(ctx context.Context, email string) (*model.
 func (ur *UserRepository) GetByRefreshToken(ctx context.Context, token string) (*model.User, *model.RefreshToken, error) {
 	query := `FOR rt IN refreshTokens
 	FILTER rt.token == @token LIMIT 0, 1
-	FOR u IN user
+	FOR u IN users
 		FILTER u._key == rt.user_id
 		RETURN {user: u, refresh: rt}`
 	bindVars := map[string]interface{}{
@@ -59,7 +59,11 @@ func (ur *UserRepository) GetByRefreshToken(ctx context.Context, token string) (
 	resStruct := &res{}
 	_, err := (*ur.Conn).Query(ctx, query, bindVars, resStruct)
 	if err != nil {
-		return nil, nil, err
+		errMsg := err.Error()
+		if e.ErrorCode(err) == e.ENOTFOUND {
+			errMsg = "Refresh Token not found"
+		}
+		return nil, nil, &e.Error{Message: errMsg, Op: "UserRepository.GetByRefreshToken", Err: err}
 	}
 	log.Printf("r str: %+v", resStruct)
 	return resStruct.User, resStruct.Refresh, nil
@@ -67,16 +71,14 @@ func (ur *UserRepository) GetByRefreshToken(ctx context.Context, token string) (
 
 // ExistsByEmail check if user exists by email
 func (ur *UserRepository) ExistsByEmail(ctx context.Context, email string) (bool, error) {
-	query := "RETURN LENGTH(FOR d IN user FILTER d.email == @email LIMIT 1 RETURN true) > 0"
+	query := "RETURN LENGTH(FOR d IN users FILTER d.email == @email LIMIT 1 RETURN true) > 0"
 	bindVars := map[string]interface{}{
-		"email": strings.TrimSpace(strings.ToLower(email)),
+		"email": email,
 	}
 	var exists bool
 	_, err := (*ur.Conn).Query(ctx, query, bindVars, &exists)
 	if err != nil {
-		log.Printf("exists error: %+v", err)
-		return false, err
+		return false, &e.Error{Op: "UserRepository.ExistsByEmail", Err: err}
 	}
-	log.Printf("exists: %+v", exists)
 	return exists, nil
 }

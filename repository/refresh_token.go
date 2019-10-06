@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fantasy/db"
+	e "fantasy/error"
 	"fantasy/model"
 	"log"
 )
@@ -21,7 +22,7 @@ func NewRefreshTokenRepository(Conn *db.DbInterface) RefreshTokenRepositoryInter
 func (rtr *RefreshTokenRepository) Store(ctx context.Context, rt *model.RefreshToken) error {
 	err := (*rtr.Conn).Insert(ctx, "refreshTokens", rt)
 	if err != nil {
-		return err
+		return &e.Error{Op: "RefreshTokenRepository.Store", Err: err}
 	}
 
 	return nil
@@ -31,7 +32,7 @@ func (rtr *RefreshTokenRepository) Store(ctx context.Context, rt *model.RefreshT
 func (rtr *RefreshTokenRepository) Update(ctx context.Context, key string, update interface{}) error {
 	err := (*rtr.Conn).Update(ctx, "refreshTokens", key, update)
 	if err != nil {
-		return err
+		return &e.Error{Op: "RefreshTokenRepository.Update", Err: err}
 	}
 
 	return nil
@@ -46,7 +47,7 @@ func (rtr *RefreshTokenRepository) GetByToken(ctx context.Context, token string)
 	refreshToken := &model.RefreshToken{}
 	_, err := (*rtr.Conn).Query(ctx, query, bindVars, refreshToken)
 	if err != nil {
-		return nil, err
+		return nil, &e.Error{Op: "RefreshTokenRepository.GetByToken", Err: err}
 	}
 	return refreshToken, nil
 }
@@ -61,7 +62,7 @@ func (rtr *RefreshTokenRepository) ExistsByToken(ctx context.Context, token stri
 	var exists bool
 	_, err := (*rtr.Conn).Query(ctx, query, bindVars, &exists)
 	if err != nil {
-		return false, err
+		return false, &e.Error{Op: "RefreshTokenRepository.ExistsByToken", Err: err}
 	}
 	log.Printf("exists: %+v", exists)
 	return exists, nil
@@ -79,7 +80,7 @@ func (rtr *RefreshTokenRepository) GetByUserAgentIPAndUserID(ctx context.Context
 	refreshToken := &model.RefreshToken{}
 	_, err := (*rtr.Conn).Query(ctx, query, bindVars, refreshToken)
 	if err != nil {
-		return nil, err
+		return nil, &e.Error{Op: "RefreshTokenRepository.GetByUserAgentIPAndUserID", Err: err}
 	}
 
 	return refreshToken, nil

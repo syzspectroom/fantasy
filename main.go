@@ -54,9 +54,9 @@ func main() {
 	userRepository := repository.NewUserRepository(&db)
 	refreshTokenRepository := repository.NewRefreshTokenRepository(&db)
 	timeoutContext := time.Duration(viper.GetInt("context.timeout")) * time.Second
-	userHandler := handler.NewUserHandler(userRepository, refreshTokenRepository, timeoutContext, []byte(viper.GetString(`jwt.secret`)))
+	authHandler := handler.NewAuthHandler(userRepository, refreshTokenRepository, timeoutContext, []byte(viper.GetString(`jwt.secret`)))
 
-	delivery.NewAuthHTTPDelivery(e, userHandler)
+	delivery.NewAuthHTTPDelivery(e, authHandler)
 
 	// Start server
 	e.Logger.Fatal(e.Start(viper.GetString(`server.address`)))

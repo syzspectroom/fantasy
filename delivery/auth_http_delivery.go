@@ -2,6 +2,7 @@ package delivery
 
 import (
 	"context"
+	e "fantasy/error"
 	"fantasy/handler"
 	"fantasy/model"
 	"log"
@@ -12,13 +13,13 @@ import (
 
 // AuthHTTPDelivery struct
 type AuthHTTPDelivery struct {
-	UserHandler handler.UserHandlerInterface
+	AuthHandler handler.AuthHandlerInterface
 }
 
 // NewAuthHTTPDelivery returns UserHTTPDelivery struct
-func NewAuthHTTPDelivery(e *echo.Echo, uh handler.UserHandlerInterface) {
+func NewAuthHTTPDelivery(e *echo.Echo, uh handler.AuthHandlerInterface) {
 	AuthHTTPDelivery := &AuthHTTPDelivery{
-		UserHandler: uh,
+		AuthHandler: uh,
 	}
 	e.POST("/login", AuthHTTPDelivery.Login)
 	e.POST("/register", AuthHTTPDelivery.Register)
@@ -41,10 +42,10 @@ func (ud *AuthHTTPDelivery) Register(c echo.Context) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	err = ud.UserHandler.Register(ctx, &reg)
+	err = ud.AuthHandler.Register(ctx, &reg)
 	if err != nil {
-		log.Printf("save error: %+v", err)
-		return c.JSON(http.StatusBadRequest, err.Error())
+		log.Printf("register error: %+v| user message: %+v", err, e.ErrorMessage(err))
+		return echo.NewHTTPError(http.StatusUnprocessableEntity, e.ErrorMessage(err))
 	}
 
 	return c.JSON(http.StatusOK, "OK")
@@ -66,9 +67,9 @@ func (ud *AuthHTTPDelivery) Login(c echo.Context) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	loginResponse, err := ud.UserHandler.Login(ctx, &login)
+	loginResponse, err := ud.AuthHandler.Login(ctx, &login)
 	if err != nil {
-		log.Printf("login error: %+v", err)
+		log.Printf("login error: %+v| user message: %+v", err, e.ErrorMessage(err))
 		return echo.NewHTTPError(http.StatusUnauthorized, "Please provide valid credentials")
 	}
 
@@ -92,9 +93,9 @@ func (ud *AuthHTTPDelivery) RefreshToken(c echo.Context) error {
 	if ctx == nil {
 		ctx = context.Background()
 	}
-	refreshResponse, err := ud.UserHandler.RefreshByToken(ctx, refresh)
+	refreshResponse, err := ud.AuthHandler.RefreshByToken(ctx, refresh)
 	if err != nil {
-		log.Printf("refresh error: %+v", err)
+		log.Printf("refresh error: %+v| user message: %+v", err, e.ErrorMessage(err))
 		return echo.NewHTTPError(http.StatusUnauthorized, "Please provide valid credentials")
 	}
 

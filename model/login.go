@@ -2,7 +2,7 @@ package model
 
 // LoginInput input struct
 type LoginInput struct {
-	Email    string `json:"email"  validate:"required,email"`
+	Email    string `mod:"trim,lcase" json:"email"  validate:"required,email"`
 	Password string `json:"password"  validate:"required"`
 	Meta     *LoginMeta
 }

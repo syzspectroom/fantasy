@@ -2,6 +2,7 @@ package db
 
 import (
 	"context"
+	e "fantasy/error"
 	"fmt"
 
 	arango "github.com/arangodb/go-driver"
@@ -20,13 +21,14 @@ func Connect(ctx context.Context,
 	dbPass string,
 	dbName string,
 ) (DbInterface, error) {
-	var db arango.Database
+	const op = "db.Connect"
 
+	var db arango.Database
 	conn, err := http.NewConnection(http.ConnectionConfig{
 		Endpoints: []string{dbURL},
 	})
 	if err != nil {
-		return nil, err
+		return nil, &e.Error{Code: e.EINTERNAL, Op: op, Err: err}
 	}
 
 	c, err := arango.NewClient(arango.ClientConfig{
@@ -34,15 +36,14 @@ func Connect(ctx context.Context,
 		Authentication: arango.BasicAuthentication(dbUser, dbPass),
 	})
 	if err != nil {
-		return nil, err
+		return nil, &e.Error{Code: e.EINTERNAL, Op: op, Err: err}
 	}
 
 	db, err = c.Database(ctx, dbName)
 	if arango.IsNotFound(err) {
-		fmt.Printf("db error: %v \n", err)
 		db, err = c.CreateDatabase(ctx, dbName, nil)
 	} else if err != nil {
-		return nil, err
+		return nil, &e.Error{Code: e.EINTERNAL, Op: op, Err: err}
 	}
 
 	return &ArangoDb{&db}, nil
@@ -59,7 +60,7 @@ func (a *ArangoDb) collection(ctx context.Context, colName string) (arango.Colle
 
 		col, err = (*a.Db).CreateCollection(ctx, colName, nil)
 	} else if err != nil {
-		return nil, err
+		return nil, &e.Error{Code: e.EINTERNAL, Op: "db.collection", Err: err}
 	}
 
 	return col, nil
@@ -67,18 +68,19 @@ func (a *ArangoDb) collection(ctx context.Context, colName string) (arango.Colle
 
 // Query assing result to resObj and returns id as first value
 func (a *ArangoDb) Query(ctx context.Context, query string, bindVars map[string]interface{}, resObj interface{}) (string, error) {
+	const op = "db.Query"
 	cursor, err := (*a.Db).Query(ctx, query, bindVars)
 	if err != nil {
 		// handle error
-		return "", err
+		return "", &e.Error{Code: e.EINTERNAL, Op: op, Err: err}
 	}
 	defer cursor.Close()
 
 	meta, err := cursor.ReadDocument(ctx, &resObj)
 	if arango.IsNoMoreDocuments(err) {
-		return "", err
+		return "", &e.Error{Code: e.ENOTFOUND, Op: op}
 	} else if err != nil {
-		return "", err
+		return "", &e.Error{Code: e.EINTERNAL, Op: op, Err: err}
 	}
 
 	return meta.Key, nil
@@ -86,14 +88,15 @@ func (a *ArangoDb) Query(ctx context.Context, query string, bindVars map[string]
 
 // Update document
 func (a *ArangoDb) Update(ctx context.Context, colName string, key string, obj interface{}) error {
+	const op = "db.Update"
 	col, err := a.collection(ctx, colName)
 	if err != nil {
-		return err
+		return &e.Error{Code: e.EINTERNAL, Op: op, Err: err}
 	}
 
 	_, err = col.UpdateDocument(ctx, key, obj)
 	if err != nil {
-		return err
+		return &e.Error{Code: e.EINTERNAL, Op: op, Err: err}
 	}
 
 	return nil
@@ -101,14 +104,15 @@ func (a *ArangoDb) Update(ctx context.Context, colName string, key string, obj i
 
 // Insert value
 func (a *ArangoDb) Insert(ctx context.Context, colName string, obj interface{}) error {
+	const op = "db.Insert"
 	col, err := a.collection(ctx, colName)
 	if err != nil {
-		return err
+		return &e.Error{Code: e.EINTERNAL, Op: op, Err: err}
 	}
 
 	_, err = col.CreateDocument(ctx, obj)
 	if err != nil {
-		return err
+		return &e.Error{Code: e.EINTERNAL, Op: op, Err: err}
 	}
 
 	return nil
@@ -116,15 +120,16 @@ func (a *ArangoDb) Insert(ctx context.Context, colName string, obj interface{}) 
 
 // InsertMany - batch insert values
 func (a *ArangoDb) InsertMany(ctx context.Context, colName string, obj interface{}) error {
+	const op = "db.InsertMany"
 	col, err := a.collection(ctx, colName)
 	if err != nil {
-		return err
+		return &e.Error{Code: e.EINTERNAL, Op: op, Err: err}
 	}
 	_, errs, err := col.CreateDocuments(ctx, obj)
 	if err != nil {
-		return err
+		return &e.Error{Code: e.EINTERNAL, Op: op, Err: err}
 	} else if err := errs.FirstNonNil(); err != nil {
-		return err
+		return &e.Error{Code: e.EINTERNAL, Op: op, Err: err}
 	}
 
 	return nil
