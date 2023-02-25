@@ -12,8 +12,8 @@ require (
 	github.com/leodido/go-urn v1.1.0 // indirect
 	github.com/segmentio/go-snakecase v1.2.0 // indirect
 	github.com/spf13/viper v1.4.0
-	golang.org/x/crypto v0.0.0-20190911031432-227b76d455e7
+	golang.org/x/crypto v0.1.0
+	gopkg.in/go-playground/assert.v1 v1.2.1 // indirect
 	gopkg.in/go-playground/mold.v2 v2.2.0
 	gopkg.in/go-playground/validator.v9 v9.29.1
-	gopkg.in/yaml.v2 v2.2.2
 )
